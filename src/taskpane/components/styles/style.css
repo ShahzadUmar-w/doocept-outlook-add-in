@@ -1,0 +1,155 @@
+/* UploadPage.css */
+
+.upload-page-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Roboto', sans-serif;
+    padding: 20px;
+  }
+  
+  .upload-form {
+    max-width: 500px;
+    width: 100%; /* Make it responsive */
+    padding: 20px;
+    border: none;
+    position: relative;
+    box-sizing: border-box; /* Ensure padding doesn't affect width */
+  }
+  
+  .file-info-section {
+    text-align: center;
+    margin-bottom: 20px;
+    box-shadow: 2px 3px 7px 3px #e9e8e8;
+    padding: 15px;
+    border-radius: 8px;
+  }
+  
+  .file-info-title {
+    margin-bottom: 15px;
+    color: #333;
+    line-height: 1.4;
+    font-size: 1.75rem;
+  }
+  
+  .file-info-description {
+    margin-bottom: 15px;
+    color: #555;
+    line-height: 1.6;
+    max-width: 90%; /* Reduced width for readability */
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .file-preview {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+  }
+  
+  .file-preview-image {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    margin-right: 10px;
+  }
+  
+  .file-name {
+    font-weight: bold;
+    font-size: 1rem;
+    color: #333;
+    text-align: left; /* Align text to the left */
+  }
+  
+  .button-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+  }
+  
+  /* Enhanced Button Styles */
+  .upload-button {
+    background: linear-gradient(to right, #ff416c, #ff4b2b) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2) !important;
+    transition: all 0.3s ease-in-out !important;
+    padding: 10px 20px !important;
+    text-transform: none !important; /* override mui default */
+  }
+  
+  .upload-button:hover {
+    transform: scale(1.05);
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  .cancel-button {
+    color: #777 !important;
+    border: 1px solid #ccc !important;
+    background-color: #f9f9f9 !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    text-transform: none !important; /* override mui default */
+  }
+  
+  .cancel-button:hover {
+    background-color: #eee !important;
+    border-color: #bbb !important;
+  }
+  
+  /* Upload Success Styles */
+  .upload-success {
+    text-align: center;
+    padding: 20px;
+    border: 1px solid #d4edda;
+    background-color: #f0fdf4;
+    color: #155724;
+    border-radius: 8px;
+  }
+  
+  .upload-success-message {
+    margin-bottom: 15px;
+  }
+  
+  .back-button {
+    background-color: #1976d2 !important;
+    color: white !important;
+    text-transform: none !important;
+  }
+  
+  .back-button:hover {
+    background-color: #1565c0 !important;
+  }
+  
+  /* Mobile Optimization */
+  @media (max-width: 600px) {
+    .upload-form {
+      padding: 15px;
+    }
+  
+    .file-info-title {
+      font-size: 1.5rem;
+    }
+  
+    .file-info-description {
+      font-size: 0.9rem;
+      max-width: 100%;
+    }
+  
+    .upload-button,
+    .cancel-button {
+      font-size: 0.85rem !important;
+      padding: 6px 12px !important;
+    }
+  
+    .file-name {
+      font-size: 0.9rem;
+    }
+    .file-preview-image {
+      width: 40px;
+      height: 40px;
+      margin-right: 5px;
+    }
+  }
