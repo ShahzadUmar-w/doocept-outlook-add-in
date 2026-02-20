@@ -80,7 +80,7 @@ useEffect(() => {
       await fetchChildrenRecursively(rootFolder);
 
       setFolders([rootFolder]);
-      console.log("Root folder with children:", rootFolder);
+      // console.log("Root folder with children:", rootFolder);
     } catch (error) {
       console.error("Error fetching folders:", error);
     } finally {
@@ -91,8 +91,8 @@ useEffect(() => {
   const handleSelect = (node: any) => {
     setSelectedFolderId(node.uuid);
     setSelectedFolderName(node.path);
-    console.log("Selected Folder Name:", node.name);
-    console.log("Selected Folder ID:", node.uuid);
+    // console.log("Selected Folder Name:", node.name);
+    // console.log("Selected Folder ID:", node.uuid);
 
     setExpandedFolders((prev) => ({ ...prev, [node.uuid]: !prev[node.uuid] }));
   };

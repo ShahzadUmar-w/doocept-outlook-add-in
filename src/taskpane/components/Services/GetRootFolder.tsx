@@ -169,8 +169,7 @@ export const getRootFolderContentInfo = async () => {
 
   const username =localStorage.getItem("userId")||"";
   const password =localStorage.getItem("pass")||"";
-console.log("Username:", username);
-console.log("password:", password);
+
 
 
 
