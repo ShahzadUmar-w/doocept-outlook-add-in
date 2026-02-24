@@ -61,28 +61,81 @@ useEffect(() => {
 
 
   // Recursively fetch children for any folder
-  const fetchChildrenRecursively = async (folder: any) => {
-    if (folder.hasChildren) {
-      const res = await getFolderContentInfo(folder.uuid);
-      folder.children = res.folder || [];
-      for (let child of folder.children) {
-        await fetchChildrenRecursively(child);
-      }
-    }
-  };
+  // const fetchChildrenRecursively = async (folder: any) => {
+  //   if (folder.hasChildren) {
+  //     const res = await getFolderContentInfo(folder.uuid);
+  //     folder.children = res.folder || [];
+  //     for (let child of folder.children) {
+  //       await fetchChildrenRecursively(child);
+  //     }
+  //   }
+  // };
 
-  const handleGetRootFolder = async () => {
+const fetchChildrenRecursively = async (folder: any) => {
+    // Ensure hasChildren is true and children is null/not already processed
+    if (folder.hasChildren === true && !folder.children) {
+        console.log(`[Tree Load] Fetching children for: ${folder.name} (UUID: ${folder.uuid})`);
+        try {
+            // Call the API for children of this specific folder
+            const res = await getFolderContentInfo(folder.uuid);
+            
+            // Check the response structure again, just in case
+            if (res?.folders?.length > 0) {
+                folder.children = res.folders; // Assuming the children response structure is the SAME as getRootFolderContentInfo
+                console.log(`[Tree Load] Successfully fetched ${folder.children.length} children for ${folder.name}.`);
+                
+                // Recursive call for the newly fetched children
+                for (let child of folder.children) {
+                    await fetchChildrenRecursively(child);
+                }
+            } else {
+                folder.children = []; // Mark as processed but empty if response is bad
+                console.warn(`[Tree Load] API returned no 'folders' array for ${folder.name}. Treating as no children.`);
+            }
+        } catch (error: any) {
+            // CRITICAL: Log detailed error for the CHILD API call
+            console.error(`[Tree Load ERROR] Failed to fetch children for ${folder.name} (${folder.uuid}). Error: ${error.message}`);
+            // Set children to empty array so recursion stops for this branch and UI doesn't hang
+            folder.children = []; 
+            setToast({ 
+                open: true, 
+                message: `Could not load subfolders for '${folder.name}'.`, 
+                severity: "error" 
+            });
+        }
+    } else if (folder.hasChildren === false || folder.children) {
+        // Already processed or explicitly has no children
+        console.log(`[Tree Load] Skipping ${folder.name}: already processed or no children flag set.`);
+    }
+};
+
+const handleGetRootFolder = async () => {
     setLoader(true);
     try {
       const rootFolderData = await getRootFolderContentInfo();
-      const rootFolder = rootFolderData.folder[0];
+      
+      // FIX: Use 'folders' key based on your screenshot
+      if (!rootFolderData?.folders || rootFolderData.folders.length === 0) {
+          throw new Error("Root folder response structure is incorrect or empty.");
+      }
+      const rootFolder = rootFolderData.folders[0];
+      
+      // Set the root folder first to immediately show it in the UI if it has no children or before recursion finishes
+      // IMPORTANT: We must use the rootFolder object here, not the old state 'folders'
+      setFolders([rootFolder]); 
 
+      // Start recursive loading for children
       await fetchChildrenRecursively(rootFolder);
 
-      setFolders([rootFolder]);
-      // console.log("Root folder with children:", rootFolder);
-    } catch (error) {
-      console.error("Error fetching folders:", error);
+      // After recursion finishes, update state to ensure the final structure is rendered
+      // FIX: Set state with the fully populated rootFolder object to force a re-render
+      setFolders([rootFolder]); 
+      
+      console.log("Final Folder Structure Loaded:", rootFolder);
+
+    } catch (error: any) {
+      console.error("Error fetching root folder structure:", error);
+      setToast({ open: true, message: `Failed to load root folder: ${error.message}`, severity: "error" });
     } finally {
       setLoader(false);
     }
@@ -91,8 +144,8 @@ useEffect(() => {
   const handleSelect = (node: any) => {
     setSelectedFolderId(node.uuid);
     setSelectedFolderName(node.path);
-    // console.log("Selected Folder Name:", node.name);
-    // console.log("Selected Folder ID:", node.uuid);
+    console.log("Selected Folder Name:", node.name);
+    console.log("Selected Folder ID:", node.uuid);
 
     setExpandedFolders((prev) => ({ ...prev, [node.uuid]: !prev[node.uuid] }));
   };
@@ -381,7 +434,7 @@ setSelectedfiles(files)
                     border: `1px solid ${getTreeViewBorderColor()}`,
                     borderRadius: "8px",
                     padding: "5px",
-                    maxHeight: "310px",
+                    maxHeight: "450px",
                     overflowY: "auto",
                     backgroundColor: getTreeViewBackgroundColor(),
                     color: getColor(),
