@@ -26,7 +26,6 @@ import { Get_Token_SSO } from "../../Services/SSO_For_Graph";
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [userLogin] = useState("Noman");
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedFolderName, setSelectedFolderName] = useState<string | null>(null);
 
@@ -50,14 +49,14 @@ const Home = () => {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
-useEffect(() => {
-  const init = async () => {
-    await handleGetRootFolder();
-     handleGetEmail_and_Attachemnts();
-  };
+  useEffect(() => {
+    const init = async () => {
+      await handleGetRootFolder();
+      handleGetEmail_and_Attachemnts();
+    };
 
-  init();
-}, []);
+    init();
+  }, []);
 
 
   // Recursively fetch children for any folder
@@ -71,86 +70,112 @@ useEffect(() => {
   //   }
   // };
 
-const fetchChildrenRecursively = async (folder: any) => {
+  const fetchChildrenRecursively = async (folder: any) => {
     // Ensure hasChildren is true and children is null/not already processed
     if (folder.hasChildren === true && !folder.children) {
-        console.log(`[Tree Load] Fetching children for: ${folder.name} (UUID: ${folder.uuid})`);
-        try {
-            // Call the API for children of this specific folder
-            const res = await getFolderContentInfo(folder.uuid);
-            
-            // Check the response structure again, just in case
-            if (res?.folders?.length > 0) {
-                folder.children = res.folders; // Assuming the children response structure is the SAME as getRootFolderContentInfo
-                console.log(`[Tree Load] Successfully fetched ${folder.children.length} children for ${folder.name}.`);
-                
-                // Recursive call for the newly fetched children
-                for (let child of folder.children) {
-                    await fetchChildrenRecursively(child);
-                }
-            } else {
-                folder.children = []; // Mark as processed but empty if response is bad
-                console.warn(`[Tree Load] API returned no 'folders' array for ${folder.name}. Treating as no children.`);
-            }
-        } catch (error: any) {
-            // CRITICAL: Log detailed error for the CHILD API call
-            console.error(`[Tree Load ERROR] Failed to fetch children for ${folder.name} (${folder.uuid}). Error: ${error.message}`);
-            // Set children to empty array so recursion stops for this branch and UI doesn't hang
-            folder.children = []; 
-            setToast({ 
-                open: true, 
-                message: `Could not load subfolders for '${folder.name}'.`, 
-                severity: "error" 
-            });
-        }
-    } else if (folder.hasChildren === false || folder.children) {
-        // Already processed or explicitly has no children
-        console.log(`[Tree Load] Skipping ${folder.name}: already processed or no children flag set.`);
-    }
-};
+      console.log(`[Tree Load] Fetching children for: ${folder.name} (UUID: ${folder.uuid})`);
+      try {
+        // Call the API for children of this specific folder
+        const res = await getFolderContentInfo(folder.uuid);
 
-const handleGetRootFolder = async () => {
+        // Check the response structure again, just in case
+        if (res?.folders?.length > 0) {
+          folder.children = res.folders; // Assuming the children response structure is the SAME as getRootFolderContentInfo
+          console.log(`[Tree Load] Successfully fetched ${folder.children.length} children for ${folder.name}.`);
+
+          // Recursive call for the newly fetched children
+          for (let child of folder.children) {
+            await fetchChildrenRecursively(child);
+          }
+        } else {
+          folder.children = []; // Mark as processed but empty if response is bad
+          console.warn(`[Tree Load] API returned no 'folders' array for ${folder.name}. Treating as no children.`);
+        }
+      } catch (error: any) {
+        // CRITICAL: Log detailed error for the CHILD API call
+        console.error(`[Tree Load ERROR] Failed to fetch children for ${folder.name} (${folder.uuid}). Error: ${error.message}`);
+        // Set children to empty array so recursion stops for this branch and UI doesn't hang
+        folder.children = [];
+        setToast({
+          open: true,
+          message: `Could not load subfolders for '${folder.name}'.`,
+          severity: "error"
+        });
+      }
+    } else if (folder.hasChildren === false || folder.children) {
+      // Already processed or explicitly has no children
+      console.log(`[Tree Load] Skipping ${folder.name}: already processed or no children flag set.`);
+    }
+  };
+
+
+  const handleGetRootFolder = async () => {
     setLoader(true);
     try {
-      const rootFolderData = await getRootFolderContentInfo();
-      
-      // FIX: Use 'folders' key based on your screenshot
-      if (!rootFolderData?.folders || rootFolderData.folders.length === 0) {
-          throw new Error("Root folder response structure is incorrect or empty.");
+      const rootRes = await getRootFolderContentInfo();
+
+      if (rootRes && rootRes.folder && rootRes.folder.length > 0) {
+        const rootFolder = rootRes.folder[0];
+
+        // 1. Root ke immediate children load karein
+        const childRes = await getFolderContentInfo(rootFolder.uuid);
+        // Filter karein taake parent folder children mein dobara na aaye (Duplicate fix)
+        const children = (childRes.folder || []).filter((c: any) => c.uuid !== rootFolder.uuid);
+
+        rootFolder.children = children;
+
+        // 2. Sirf ROOT ko expand karein, sab ko nahi
+        setExpandedFolders({ [rootFolder.uuid]: true });
+
+        setFolders([rootFolder]);
       }
-      const rootFolder = rootFolderData.folders[0];
-      
-      // Set the root folder first to immediately show it in the UI if it has no children or before recursion finishes
-      // IMPORTANT: We must use the rootFolder object here, not the old state 'folders'
-      setFolders([rootFolder]); 
-
-      // Start recursive loading for children
-      await fetchChildrenRecursively(rootFolder);
-
-      // After recursion finishes, update state to ensure the final structure is rendered
-      // FIX: Set state with the fully populated rootFolder object to force a re-render
-      setFolders([rootFolder]); 
-      
-      console.log("Final Folder Structure Loaded:", rootFolder);
-
     } catch (error: any) {
-      console.error("Error fetching root folder structure:", error);
-      setToast({ open: true, message: `Failed to load root folder: ${error.message}`, severity: "error" });
+      console.error("Error:", error);
+      setToast({ open: true, message: "Failed to load folders", severity: "error" });
     } finally {
       setLoader(false);
     }
   };
 
-  const handleSelect = (node: any) => {
+  const handleSelect = async (node: any) => {
     setSelectedFolderId(node.uuid);
     setSelectedFolderName(node.path);
-    console.log("Selected Folder Name:", node.name);
-    console.log("Selected Folder ID:", node.uuid);
 
-    setExpandedFolders((prev) => ({ ...prev, [node.uuid]: !prev[node.uuid] }));
+    // Agar folder ke children hain lekin abhi tak load nahi huay
+    if (node.hasChildren && !node.children) {
+      setLoader(true);
+      try {
+        const res = await getFolderContentInfo(node.uuid);
+        // Duplicate filter: Check karein ke API parent ko hi child bana kar to nahi bhej rahi
+        const children = (res.folder || []).filter((c: any) => c.uuid !== node.uuid);
+
+        const updateTree = (list: any[]): any[] => {
+          return list.map((item) => {
+            if (item.uuid === node.uuid) {
+              return { ...item, children: children };
+            }
+            if (item.children) {
+              return { ...item, children: updateTree(item.children) };
+            }
+            return item;
+          });
+        };
+
+        setFolders((prev) => updateTree(prev));
+      } catch (err) {
+        console.error("Failed to load children", err);
+      } finally {
+        setLoader(false);
+      }
+    }
+
+    // Toggle expand state sirf clicked folder ke liye
+    setExpandedFolders((prev) => ({
+      ...prev,
+      [node.uuid]: !prev[node.uuid]
+    }));
   };
 
-  // Inside Home.tsx
 
   const handleNext = async () => {
     if (!selectedFolderId) {
@@ -161,18 +186,18 @@ const handleGetRootFolder = async () => {
     setLoader(true); // Start loader
 
     try {
-    
+
       // Filter only file attachments
-     
-     if (Selectedfiles.length === 0) {
+
+      if (Selectedfiles.length === 0) {
         setToast({ open: true, message: "No files to upload!", severity: "error" });
         setLoader(false);
         return;
-      }else{
-      setUploadData({Selectedfiles, folderUuid: selectedFolderId, folderPath: selectedFolderName });
+      } else {
+        setUploadData({ Selectedfiles, folderUuid: selectedFolderId, folderPath: selectedFolderName });
         setUploadReady(true);
       }
-      
+
 
       // Show success toast
       setToast({ open: true, message: "Email and attachments ready for upload!", severity: "success" });
@@ -242,9 +267,9 @@ const handleGetRootFolder = async () => {
 
       // Combine email + attachments
       const files: File[] = [emailFile, ...attachmentFiles];
-setSelectedfiles(files)
+      setSelectedfiles(files)
       // Pass to UploadPage
-      
+
 
       // Show success toast
       setToast({ open: true, message: "Email and attachments ready for upload!", severity: "success" });
@@ -430,6 +455,12 @@ setSelectedfiles(files)
               </Slide>
               <Slide direction="up" in={true} style={{ transitionDelay: "400ms" }}>
                 <TreeView
+                  // expandedItems un IDs ki list leta hai jo khuli honi chahiye
+                  expandedItems={Object.keys(expandedFolders).filter((key) => expandedFolders[key])}
+                  // Is event ko handle karein taake arrow click par bhi toggle ho
+                  onItemExpansionToggle={(__event, itemId, isExpanded) => {
+                    setExpandedFolders(prev => ({ ...prev, [itemId]: isExpanded }));
+                  }}
                   sx={{
                     border: `1px solid ${getTreeViewBorderColor()}`,
                     borderRadius: "8px",
