@@ -103,8 +103,8 @@ const Login = () => {
         localStorage.setItem("userId", userId);
         localStorage.setItem("pass", password);
       } else {
-        localStorage.removeItem("userId");
-        localStorage.removeItem("pass");
+          localStorage.setItem("userId", userId);
+        localStorage.setItem("pass", password);
       }
 
       setSnack({
