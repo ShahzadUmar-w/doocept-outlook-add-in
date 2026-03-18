@@ -64,8 +64,8 @@ const UploadPage: React.FC<AppProps> = ({ setUploadRedy, files, folderUuid, fold
     try {
       // Loop through files and upload
       const folderpermitions=await getFolderProperties(folderUuid)
-      // console.log("folderpermitions",folderpermitions)
-      // console.log("folderpermitions.permissions",folderpermitions.permissions)
+      console.log("folderpermitions",folderpermitions)
+      console.log("folderpermitions.permissions",folderpermitions.permissions)
 
       if(folderpermitions.permissions && folderpermitions.permissions>1){
   for (const file of files) {
