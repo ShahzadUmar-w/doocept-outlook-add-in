@@ -28,6 +28,8 @@ const Login = () => {
   const [savePassword, setSavePassword] = useState(false);
   const [loader, setLoader] = useState(false);
   const [Is_Login_Screen, setIs_Login_Screen] = useState(true);
+  const [AccessLink, setAccessLink] = useState('');
+
   const { theme } = useTheme();
 
   const [snack, setSnack] = useState({
@@ -40,20 +42,25 @@ const Login = () => {
   useEffect(() => {
     const savedUserId = localStorage.getItem('userId');
     const savedPass = localStorage.getItem('pass');
+    const AccessLinkStored = localStorage.getItem('AccessLink');
 
     if (savedUserId) setUserId(savedUserId);
+    if (AccessLinkStored) setAccessLink(AccessLinkStored);
     if (savedPass) {
         setPassword(savedPass);
         setSavePassword(true); // Agar data mil jaye toh checkbox tick kar dein
     }
   }, []);
 
+   useEffect(() => {
+    localStorage.setItem('AccessLink', AccessLink);
+  }, [AccessLink]);
+
   const handleLogin = async () => {
     if (!userId || !password) {
         setSnack({ open: true, message: "Please fill all fields", severity: "warning" });
         return;
     }
-
     setLoader(true);
 
     try {
@@ -67,7 +74,7 @@ const Login = () => {
 
       // 1. AUTH CALL (OPTIONS check)
       await fetch(
-        "https://docceptdemo.com/doccept/services/login/loginService/onAuthSuccess",
+        `${AccessLink}/doccept/services/login/loginService/onAuthSuccess`,
         {
           method: "OPTIONS",
           headers: myHeaders,
@@ -84,7 +91,7 @@ const Login = () => {
 
       // NOTE: Agar "OPTIONS" se login nahi ho raha, toh yahan "POST" try karein
       const loginResponse = await fetch(
-        "https://docceptdemo.com/doccept/services/login/loginService/login",
+        `${AccessLink}/doccept/services/login/loginService/login`,
         {
           method: "OPTIONS", 
           headers: loginHeaders,
@@ -165,7 +172,17 @@ const Login = () => {
         <Slide direction="up" in style={{ transitionDelay: '200ms' }}>
           <Box component="form" noValidate sx={{ width: '100%' }}>
             {/* ✅ Link wala TextField remove kar diya gaya hai */}
-            
+             <TextField
+              label="Access Link"
+              fullWidth
+              variant="standard"
+              value={AccessLink}
+              onChange={(e) => setAccessLink(e.target.value)}
+              InputProps={{ style: { color: getTextColor() } }}
+              InputLabelProps={{ style: { color: getTextColor() } }}
+              sx={{ mb: 2 }}
+            />
+
             <TextField
               label="User ID"
               fullWidth

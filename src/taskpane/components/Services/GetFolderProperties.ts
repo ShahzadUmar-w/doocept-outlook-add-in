@@ -1,5 +1,7 @@
 export async function getFolderProperties(fldId: string) {
-  const url = `https://docceptdemo.com/doccept/services/rest/folder/getProperties?fldId=${fldId}`;
+    const AccessLinkStored = localStorage.getItem('AccessLink');
+  
+  const url = `${AccessLinkStored}/doccept/services/rest/folder/getProperties?fldId=${fldId}`;
 
    const username =localStorage.getItem("userId")||"";
   const password =localStorage.getItem("pass")||"";

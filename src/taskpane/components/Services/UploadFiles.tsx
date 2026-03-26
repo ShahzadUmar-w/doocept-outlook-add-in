@@ -32,10 +32,11 @@ export async function uploadToDoccept(file, folderPath, docUuid, callback) {
   const username = localStorage.getItem("userId") || "";
   const password = localStorage.getItem("pass") || "";
   const base64 = btoa(`${username}:${password}`);
+    const AccessLinkStored = localStorage.getItem('AccessLink');
 
   try {
     const resp = await fetch(
-      "https://docceptdemo.com/doccept/services/rest/uploadService/insert",
+      `${AccessLinkStored}/doccept/services/rest/uploadService/insert`,
       {
         method: "POST",
         headers: {
