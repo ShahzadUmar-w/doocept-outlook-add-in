@@ -535,6 +535,12 @@ import UploadPage from "./UploadPgae";
 import { getFolderContentInfo, getRootFolderContentInfo } from "../../Services/GetRootFolder";
 import { Get_Token_SSO } from "../../Services/SSO_For_Graph";
 
+const getFoldersFromResponse = (response: any): any[] => {
+  if (Array.isArray(response?.folders)) return response.folders;
+  if (Array.isArray(response?.folder)) return response.folder;
+  return [];
+};
+
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -572,10 +578,12 @@ const Home = () => {
     setLoader(true);
     try {
       const rootRes = await getRootFolderContentInfo();
-      if (rootRes && rootRes.folder && rootRes.folder.length > 0) {
-        const rootFolder = rootRes.folder[0];
+      const rootFolders = getFoldersFromResponse(rootRes);
+
+      if (rootFolders.length > 0) {
+        const rootFolder = rootFolders[0];
         const childRes = await getFolderContentInfo(rootFolder.uuid);
-        const children = (childRes.folder || []).filter((c: any) => c.uuid !== rootFolder.uuid);
+        const children = getFoldersFromResponse(childRes).filter((c: any) => c.uuid !== rootFolder.uuid);
         rootFolder.children = children;
         setExpandedFolders({ [rootFolder.uuid]: true });
         setFolders([rootFolder]);
@@ -594,7 +602,7 @@ const Home = () => {
       setLoader(true);
       try {
         const res = await getFolderContentInfo(node.uuid);
-        const children = (res.folder || []).filter((c: any) => c.uuid !== node.uuid);
+        const children = getFoldersFromResponse(res).filter((c: any) => c.uuid !== node.uuid);
 
         const updateTree = (list: any[]): any[] => {
           return list.map((item) => {
