@@ -59,41 +59,61 @@ const UploadPage: React.FC<AppProps> = ({ setUploadRedy, files, folderUuid, fold
     setSnack({ open: true, message: msg, severity: sev });
   };
 
-  const uploadAllFiles = async () => {
-    setLoader(true);
-    try {
-      // Loop through files and upload
-      const folderpermitions=await getFolderProperties(folderUuid)
-      console.log("folderpermitions",folderpermitions)
-      console.log("folderpermitions.permissions",folderpermitions.permissions)
+const uploadAllFiles = async () => {
+  setLoader(true);
 
-      if(folderpermitions.permissions && folderpermitions.permissions>1){
-  for (const file of files) {
-        await uploadToDoccept(file, folderPath, folderUuid , (data,err)=>{
-if(data ){
-toast.success(`Uploaded: ${file.name}`);
-}
-if(err ){
-toast.error(`Upload failed: ${file.name}` + (err.message ? ` - ${err.message}` : ''));
-}
+  try {
+    const folderpermitions = await getFolderProperties(folderUuid);
+    console.log("folderpermitions", folderpermitions);
+    console.log("folderpermitions.permissions", folderpermitions.permissions);
 
+    if (folderpermitions.permissions && folderpermitions.permissions > 1) {
+
+      // 🟢 Identify email vs attachments
+      // Assumption: first item or matching subject is email
+      const emailFile = files.find(f =>
+        f.name === fileName || f.name.toLowerCase().includes("email")
+      );
+
+      const attachmentFiles = files.filter(f => f !== emailFile);
+
+      // 🟢 Decide what to upload
+      const filesToUpload = onlyAttachments
+        ? attachmentFiles
+        : files; // email + attachments
+
+      for (const file of filesToUpload) {
+        await uploadToDoccept(file, folderPath, folderUuid, (data:any, err:any) => {
+          if (data) {
+            toast.success(`Uploaded: ${file.name}`);
+          }
+
+          if (err) {
+            toast.error(
+              `Upload failed: ${file.name}` +
+              (err.message ? ` - ${err.message}` : "")
+            );
+          }
         });
       }
-      }else{
-      handleShowSnack("You dont have permitions to upload these files to this folder", "error");
-      }
-    
-      
+
       setUploaded(true);
       handleShowSnack("All items uploaded successfully! 🚀", "success");
-    } catch (err: any) {
-      console.error("Upload process error:", err);
-      // 'err.message' ab hamari service se clean XML error laayega
-      handleShowSnack(err.message || "Server Error", "error");
-    } finally {
-      setLoader(false);
+
+    } else {
+      handleShowSnack(
+        "You dont have permitions to upload these files to this folder",
+        "error"
+      );
     }
-  };
+
+  } catch (err: any) {
+    console.error("Upload process error:", err);
+    handleShowSnack(err.message || "Server Error", "error");
+  } finally {
+    setLoader(false);
+  }
+};
 
   const truncateFileName = (name: string, len = 30) => 
     name.length > len ? name.substring(0, len) + "..." : name;

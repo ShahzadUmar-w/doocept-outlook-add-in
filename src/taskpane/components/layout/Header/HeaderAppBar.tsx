@@ -221,30 +221,36 @@
 //   );
 // }
 
+import * as React from "react";
+import AppBar from "@mui/material/AppBar";
+import Box from "@mui/material/Box";
+import Toolbar from "@mui/material/Toolbar";
+import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import AccountCircle from "@mui/icons-material/AccountCircle";
+import PaletteIcon from "@mui/icons-material/Palette";
+import MenuItem from "@mui/material/MenuItem";
+import Menu from "@mui/material/Menu";
+import { useNavigate } from "react-router-dom";
+import { useTheme } from "../../styles/TheemProvider";
+import { DarkMode, LightMode } from "@mui/icons-material";
+import { ListItemIcon, ListItemText } from "@mui/material";
 
-import * as React from 'react';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
-import AccountCircle from '@mui/icons-material/AccountCircle';
-import PaletteIcon from '@mui/icons-material/Palette';
-import MenuItem from '@mui/material/MenuItem';
-import Menu from '@mui/material/Menu';
-import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../../styles/TheemProvider';
-import { DarkMode, LightMode, Padding } from '@mui/icons-material';
-import { ListItemIcon, ListItemText } from '@mui/material';
-// import { useTheme } from '../../ThemeContext'; // Import useTheme
-interface AppProps{
-  Is_Login_Screen:any
+interface AppProps {
+  Is_Login_Screen: any;
 }
- const HeaderAppBar:React.FC<AppProps>=({Is_Login_Screen})=> {
-  const { theme, setTheme } = useTheme(); // Use the theme context
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [anchorElTheme, setAnchorElTheme] = React.useState<null | HTMLElement>(null);
+
+const HeaderAppBar: React.FC<AppProps> = ({ Is_Login_Screen }) => {
+  const { theme, setTheme } = useTheme();
+
+  const [anchorEl, setAnchorEl] =
+    React.useState<null | HTMLElement>(null);
+
+  const [anchorElTheme, setAnchorElTheme] =
+    React.useState<null | HTMLElement>(null);
+
   const navigate = useNavigate();
+
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -253,123 +259,193 @@ interface AppProps{
     setAnchorEl(null);
   };
 
-  const handleThemeMenu = (event: React.MouseEvent<HTMLElement>) => {
+  const handleThemeMenu = (
+    event: React.MouseEvent<HTMLElement>
+  ) => {
     setAnchorElTheme(event.currentTarget);
   };
 
   const handleThemeClose = () => {
     setAnchorElTheme(null);
   };
+
   const handleThemeChange = (selectedTheme: string) => {
     setTheme(selectedTheme);
+
+    // save theme permanently
+    localStorage.setItem("appTheme", selectedTheme);
+
     handleThemeClose();
   };
 
   const handleBack = () => {
-    navigate('/');
+    navigate("/");
   };
 
+  React.useEffect(() => {
+    const savedTheme = localStorage.getItem("appTheme");
+
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, []);
+
   let appBarStyle: React.CSSProperties = {
-    // borderRadius: '27px',
-    width: '100%',
-    boxShadow: 'none'
+    width: "100%",
+    boxShadow: "none",
+    transition: "all 0.3s ease",
   };
 
   if (theme === "white") {
-    appBarStyle = { ...appBarStyle, backgroundColor: 'whitesmoke', color: '#c81355' };
+    appBarStyle = {
+      ...appBarStyle,
+      backgroundColor: "whitesmoke",
+      color: "#c81355",
+    };
   } else if (theme === "lightGrey") {
-    appBarStyle = { ...appBarStyle, backgroundColor: '#f5f5f5', color: '#c81355' };
+    appBarStyle = {
+      ...appBarStyle,
+      backgroundColor: "#f5f5f5",
+      color: "#c81355",
+    };
   } else if (theme === "dark") {
-    appBarStyle = { ...appBarStyle, backgroundColor: '#424242', color: '#ffffff' };
+    appBarStyle = {
+      ...appBarStyle,
+      backgroundColor: "#424242",
+      color: "#ffffff",
+    };
   }
 
   return (
-    <Box sx={{ flexGrow: 1 }} style={{ display: 'flex', justifyContent: 'center', padding:'0px' }}>
+    <Box
+      sx={{ flexGrow: 1 }}
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        padding: "0px",
+      }}
+    >
       <AppBar position="static" style={appBarStyle}>
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, display: 'flex' }}>
-            <Box>
-
-
-            <Box sx={{textAlign: 'center', display:'flex', justifyContent:'center', alignItems:'center'}}>
-        <img
-          src={require(`../../../../../assets/${theme ==='dark'?'DarkTheemeLogo.png':'LightTheemeLogo.png'}`)}
-          alt="Logo"
-          style={{ width: '125px', height: 'auto' }}
-        />
-      </Box>
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              flexGrow: 1,
+              display: "flex",
+            }}
+          >
+            <Box
+              sx={{
+                textAlign: "center",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <img
+                src={require(`../../../../../assets/${
+                  theme === "dark"
+                    ? "DarkTheemeLogo.png"
+                    : "LightTheemeLogo.png"
+                }`)}
+                alt="Logo"
+                style={{
+                  width: "125px",
+                  height: "auto",
+                }}
+              />
             </Box>
           </Typography>
-          <div>
 
-            {Is_Login_Screen? (<>            {/* Theme changer button */}
-            <IconButton
-              size="large"
-              aria-label="select theme"
-              aria-controls="menu-theme"
-              aria-haspopup="true"
-              onClick={handleThemeMenu}
-              color="inherit"
-            >
-              <PaletteIcon />
-            </IconButton>
-            <Menu
-      id="menu-theme"
-      anchorEl={anchorElTheme}
-      open={Boolean(anchorElTheme)}
-      onClose={handleClose}
-      keepMounted
-      anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      transformOrigin={{ vertical: "top", horizontal: "right" }}
-    >
-      <MenuItem onClick={() => handleThemeChange("white")}>
-        <ListItemIcon>
-          <LightMode fontSize="small" />
-        </ListItemIcon>
-        <ListItemText primary="Light Theme" />
-      </MenuItem>
-      <MenuItem onClick={() => handleThemeChange("dark")}>
-        <ListItemIcon>
-          <DarkMode fontSize="small" />
-        </ListItemIcon>
-        <ListItemText primary="Dark Theme" />
-      </MenuItem>
-     </Menu></>) :(<>
-      <IconButton
-              size="large"
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={handleMenu}
-              color="inherit"
-            >
-              <AccountCircle />
-            </IconButton>
-            <Menu
-              id="menu-appbar"
-              anchorEl={anchorEl}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              open={Boolean(anchorEl)}
-              onClose={handleClose}
-            >
-              <MenuItem onClick={handleBack}>Log Out</MenuItem>
-            </Menu>
-    </>)}
+          {/* Theme Button ALWAYS Visible */}
+          <IconButton
+            size="large"
+            aria-label="select theme"
+            aria-controls="menu-theme"
+            aria-haspopup="true"
+            onClick={handleThemeMenu}
+            color="inherit"
+          >
+            <PaletteIcon />
+          </IconButton>
 
-            {/* Account menu */}
-          
-          </div>
+          {/* Theme Menu */}
+          <Menu
+            id="menu-theme"
+            anchorEl={anchorElTheme}
+            open={Boolean(anchorElTheme)}
+            onClose={handleThemeClose}
+            keepMounted
+            anchorOrigin={{
+              vertical: "top",
+              horizontal: "right",
+            }}
+            transformOrigin={{
+              vertical: "top",
+              horizontal: "right",
+            }}
+          >
+            <MenuItem
+              onClick={() => handleThemeChange("white")}
+            >
+              <ListItemIcon>
+                <LightMode fontSize="small" />
+              </ListItemIcon>
+
+              <ListItemText primary="Light Theme" />
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => handleThemeChange("dark")}
+            >
+              <ListItemIcon>
+                <DarkMode fontSize="small" />
+              </ListItemIcon>
+
+              <ListItemText primary="Dark Theme" />
+            </MenuItem>
+          </Menu>
+
+          {/* Account Menu Only After Login */}
+          {!Is_Login_Screen && (
+            <>
+              <IconButton
+                size="large"
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                onClick={handleMenu}
+                color="inherit"
+              >
+                <AccountCircle />
+              </IconButton>
+
+              <Menu
+                id="menu-appbar"
+                anchorEl={anchorEl}
+                anchorOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+                keepMounted
+                transformOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+                open={Boolean(anchorEl)}
+                onClose={handleClose}
+              >
+                <MenuItem onClick={handleBack}>
+                  Log Out
+                </MenuItem>
+              </Menu>
+            </>
+          )}
         </Toolbar>
       </AppBar>
     </Box>
   );
-}
-export default  HeaderAppBar;
+};
+
+export default HeaderAppBar;
