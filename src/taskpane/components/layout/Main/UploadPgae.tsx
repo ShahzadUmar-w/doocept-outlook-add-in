@@ -59,57 +59,108 @@ const UploadPage: React.FC<AppProps> = ({ setUploadRedy, files, folderUuid, fold
     setSnack({ open: true, message: msg, severity: sev });
   };
 
+const sanitizeFileName = (name: string) => {
+  // Replace characters: \ / : * ? " < > | with an underscore "_"
+  return name.replace(/[\\/:*?"<>|]/g, '_');
+};
+
+// const uploadAllFiles = async () => {
+//   setLoader(true);
+
+//   try {
+//     const folderpermitions = await getFolderProperties(folderUuid);
+//     console.log("folderpermitions", folderpermitions);
+//     console.log("folderpermitions.permissions", folderpermitions.permissions);
+
+//     if (folderpermitions.permissions && folderpermitions.permissions > 1) {
+
+//       // 🟢 Identify email vs attachments
+//       // Assumption: first item or matching subject is email
+//       const emailFile = files.find(f =>
+//         f.name === fileName || f.name.toLowerCase().includes("email")
+//       );
+
+//       const attachmentFiles = files.filter(f => f !== emailFile);
+
+//       // 🟢 Decide what to upload
+//       const filesToUpload = onlyAttachments
+//         ? attachmentFiles
+//         : files; // email + attachments
+
+//       for (const file of filesToUpload) {
+//          const cleanName = sanitizeFileName(file.name);
+        
+//         // 2. Naya file object banayein agar naam change hua hai
+//         const fileToUpload = new File([file], cleanName, { type: file.type });
+//         await uploadToDoccept(fileToUpload, folderPath, folderUuid, (data:any, err:any) => {
+//           if (data) {
+//             toast.success(`Uploaded: ${file.name}`);
+//           }
+
+//           if (err) {
+//             toast.error(
+//               `Upload failed: ${file.name}` +
+//               (err.message ? ` - ${err.message}` : "")
+//             );
+//           }
+//         });
+//       }
+
+//       setUploaded(true);
+//       handleShowSnack("All items uploaded successfully! 🚀", "success");
+
+//     } else {
+//       handleShowSnack(
+//         "You dont have permitions to upload these files to this folder",
+//         "error"
+//       );
+//     }
+
+//   } catch (err: any) {
+//     console.error("Upload process error:", err);
+//     handleShowSnack(err.message || "Server Error", "error");
+//   } finally {
+//     setLoader(false);
+//   }
+// };
+
 const uploadAllFiles = async () => {
   setLoader(true);
-
   try {
     const folderpermitions = await getFolderProperties(folderUuid);
-    console.log("folderpermitions", folderpermitions);
-    console.log("folderpermitions.permissions", folderpermitions.permissions);
-
     if (folderpermitions.permissions && folderpermitions.permissions > 1) {
 
-      // 🟢 Identify email vs attachments
-      // Assumption: first item or matching subject is email
-      const emailFile = files.find(f =>
-        f.name === fileName || f.name.toLowerCase().includes("email")
-      );
+      let filesToUpload: any[] = [];
 
-      const attachmentFiles = files.filter(f => f !== emailFile);
+      if (onlyAttachments) {
+        // ✅ Only Attachments logic:
+        // 1. !(f as any).isMainEmail  -> Matlab .eml file nahi jayegi
+        // 2. !(f as any).isInline     -> Matlab Signature ki images nahi jayengi
+        filesToUpload = files.filter(f => !(f as any).isMainEmail && !(f as any).isInline);
+      } else {
+        // ✅ Email + Attachments logic:
+        // Sab kuch jayega (including signatures)
+        filesToUpload = files;
+      }
 
-      // 🟢 Decide what to upload
-      const filesToUpload = onlyAttachments
-        ? attachmentFiles
-        : files; // email + attachments
+      if (filesToUpload.length === 0) {
+        handleShowSnack("No attachments to upload.", "warning");
+        setLoader(false);
+        return;
+      }
 
       for (const file of filesToUpload) {
-        await uploadToDoccept(file, folderPath, folderUuid, (data:any, err:any) => {
-          if (data) {
-            toast.success(`Uploaded: ${file.name}`);
-          }
-
-          if (err) {
-            toast.error(
-              `Upload failed: ${file.name}` +
-              (err.message ? ` - ${err.message}` : "")
-            );
-          }
+        await uploadToDoccept(file, folderPath, folderUuid, (data: any, err: any) => {
+          if (data) toast.success(`Uploaded: ${file.name}`);
+          if (err) toast.error(`Failed: ${file.name} - ${err.message}`);
         });
       }
 
       setUploaded(true);
-      handleShowSnack("All items uploaded successfully! 🚀", "success");
-
-    } else {
-      handleShowSnack(
-        "You dont have permitions to upload these files to this folder",
-        "error"
-      );
+      handleShowSnack("Upload complete!", "success");
     }
-
   } catch (err: any) {
-    console.error("Upload process error:", err);
-    handleShowSnack(err.message || "Server Error", "error");
+    handleShowSnack(err.message, "error");
   } finally {
     setLoader(false);
   }

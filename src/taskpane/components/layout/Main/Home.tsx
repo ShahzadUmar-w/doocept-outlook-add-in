@@ -145,6 +145,9 @@ const Home = () => {
     init();
   }, []);
 
+
+  
+
   const handleGetRootFolder = async () => {
     setLoader(true);
     try {
@@ -298,70 +301,160 @@ const Home = () => {
     }
   };
 
-  const handleGetEmail_and_Attachemnts = async () => {
-    setLoader(true);
-    try {
-      const subject = Office.context.mailbox.item.subject || "Untitled Email";
+  // const handleGetEmail_and_Attachemnts = async () => {
+  //   setLoader(true);
+  //   try {
+  //     const subject = Office.context.mailbox.item.subject || "Untitled Email";
 
-      const restId =
-        Office.context.mailbox.diagnostics.hostName === "OutlookIOS"
-          ? Office.context.mailbox.item.itemId
-          : Office.context.mailbox.convertToRestId(
-              Office.context.mailbox.item.itemId,
-              Office.MailboxEnums.RestVersion.v2_0
-            );
+  //     const restId =
+  //       Office.context.mailbox.diagnostics.hostName === "OutlookIOS"
+  //         ? Office.context.mailbox.item.itemId
+  //         : Office.context.mailbox.convertToRestId(
+  //             Office.context.mailbox.item.itemId,
+  //             Office.MailboxEnums.RestVersion.v2_0
+  //           );
 
-      const token: any = await Get_Token_SSO();
+  //     const token: any = await Get_Token_SSO();
 
-      const emailResp = await fetch(
-        `https://graph.microsoft.com/v1.0/me/messages/${restId}/$value`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+  //     const emailResp = await fetch(
+  //       `https://graph.microsoft.com/v1.0/me/messages/${restId}/$value`,
+  //       {
+  //         headers: { Authorization: `Bearer ${token}` },
+  //       }
+  //     );
 
-      if (!emailResp.ok) throw new Error("Failed to fetch email content");
+  //     if (!emailResp.ok) throw new Error("Failed to fetch email content");
 
-      const emailBlob = await emailResp.blob();
-      const emailFile = new File([emailBlob], `${subject}.eml`, {
-        type: "message/rfc822",
-      });
+  //     const emailBlob = await emailResp.blob();
+  //     const emailFile = new File([emailBlob], `${subject}.eml`, {
+  //       type: "message/rfc822",
+  //     });
 
-      const attResp = await fetch(
-        `https://graph.microsoft.com/v1.0/me/messages/${restId}/attachments`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+  //     const attResp = await fetch(
+  //       `https://graph.microsoft.com/v1.0/me/messages/${restId}/attachments`,
+  //       {
+  //         headers: { Authorization: `Bearer ${token}` },
+  //       }
+  //     );
 
-      if (!attResp.ok) throw new Error("Failed to fetch email attachments");
+  //     if (!attResp.ok) throw new Error("Failed to fetch email attachments");
 
-      const attData = await attResp.json();
+  //     const attData = await attResp.json();
 
-      const attachmentFiles: File[] = attData.value
-        .filter((att: any) => att["@odata.type"] === "#microsoft.graph.fileAttachment")
-        .map((att: any) => {
-          return new File(
-            [Uint8Array.from(atob(att.contentBytes), (c) => c.charCodeAt(0))],
-            att.name
+  //     const attachmentFiles: File[] = attData.value
+  //       .filter((att: any) => att["@odata.type"] === "#microsoft.graph.fileAttachment")
+  //       .map((att: any) => {
+  //         return new File(
+  //           [Uint8Array.from(atob(att.contentBytes), (c) => c.charCodeAt(0))],
+  //           att.name
+  //         );
+  //       });
+
+  //     const files: File[] = [emailFile, ...attachmentFiles];
+  //     setSelectedfiles(files);
+
+  //     setToast({
+  //       open: true,
+  //       message: "Email and attachments ready for upload!",
+  //       severity: "success",
+  //     });
+  //   } catch (err: any) {
+  //     console.error(err);
+  //     setToast({ open: true, message: `Error: ${err.message}`, severity: "error" });
+  //   } finally {
+  //     setLoader(false);
+  //   }
+  // };
+
+const handleGetEmail_and_Attachemnts = async () => {
+  setLoader(true);
+  try {
+    const sanitize = (name: string) => name.replace(/[\\/:*?"<>|]/g, '_');
+    const subject = Office.context.mailbox.item.subject || "Untitled Email";
+    const cleanSubject = sanitize(subject);
+
+    // --- 1. Get Email (.eml) from Graph API ---
+    const restId =
+      Office.context.mailbox.diagnostics.hostName === "OutlookIOS"
+        ? Office.context.mailbox.item.itemId
+        : Office.context.mailbox.convertToRestId(
+            Office.context.mailbox.item.itemId,
+            Office.MailboxEnums.RestVersion.v2_0
           );
+
+    const token: any = await Get_Token_SSO();
+    const emailResp = await fetch(
+      `https://graph.microsoft.com/v1.0/me/messages/${restId}/$value`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!emailResp.ok) throw new Error("Failed to fetch email content");
+    const emailBlob = await emailResp.blob();
+    const emailFile: any = new File([emailBlob], `${cleanSubject}.eml`, { type: "message/rfc822" });
+    emailFile.isMainEmail = true; // Identify as main email
+
+    // --- 2. Get Attachments from Office.js ---
+    const getAttachments = (): Promise<File[]> => {
+      return new Promise((resolve, reject) => {
+        // Get all attachment metadata
+        const item = Office.context.mailbox.item;
+        const attachmentsMetadata = item.attachments;
+
+        if (!attachmentsMetadata || attachmentsMetadata.length === 0) {
+          resolve([]);
+          return;
+        }
+
+        const attachmentPromises = attachmentsMetadata.filter((att: any) => !att.isInline).map((att: any) => {
+          return new Promise<File>((res) => {
+            // Har attachment ka content base64 mein mangwayein
+            item.getAttachmentContentAsync(att.id, (result) => {
+              if (result.status === Office.AsyncResultStatus.Succeeded) {
+                // Base64 string ko bytes mein convert karein
+                const base64Content = result.value.content;
+                const byteCharacters = atob(base64Content);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                  byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+
+                const cleanAttName = sanitize(att.name);
+                const fileObj: any = new File([byteArray], cleanAttName, { type: att.contentType });
+                
+                // Identify properties
+                fileObj.isInline = att.isInline; // true if it's a signature image
+                fileObj.isMainEmail = false;
+
+                res(fileObj);
+              }
+            });
+          });
         });
 
-      const files: File[] = [emailFile, ...attachmentFiles];
-      setSelectedfiles(files);
+        Promise.all(attachmentPromises).then(resolve).catch(reject);
+      });
+    };
 
-      setToast({
+    const attachmentFiles = await getAttachments();
+
+    // Combine both
+    const allFiles: File[] = [emailFile, ...attachmentFiles];
+    setSelectedfiles(allFiles);
+
+    setToast({ open: true, message: "Email & Attachments ready!", severity: "success" });
+ setToast({
         open: true,
         message: "Email and attachments ready for upload!",
         severity: "success",
       });
-    } catch (err: any) {
-      console.error(err);
-      setToast({ open: true, message: `Error: ${err.message}`, severity: "error" });
-    } finally {
-      setLoader(false);
-    }
-  };
+  } catch (err: any) {
+    console.error(err);
+    setToast({ open: true, message: `Error: ${err.message}`, severity: "error" });
+  } finally {
+    setLoader(false);
+  }
+};
 
   const handleToastClose = (_event?: any, reason?: string) => {
     if (reason === "clickaway") return;

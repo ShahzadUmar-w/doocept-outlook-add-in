@@ -20,7 +20,7 @@ export async function uploadToDoccept(file, folderPath, docUuid, callback) {
   formData.append("file", file);
   formData.append("docPath", folderPath);
   formData.append("docUuid", docUuid);
-  formData.append("comment", "Uploaded from API Test");
+  formData.append("comment", "Uploaded from doccept outlook plugin");
   formData.append("importZip", "false");
   formData.append("extractText", "false");
   formData.append("slctdCategory", "");
