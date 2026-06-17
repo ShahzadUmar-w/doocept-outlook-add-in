@@ -279,8 +279,16 @@ const HeaderAppBar: React.FC<AppProps> = ({ Is_Login_Screen }) => {
   };
 
   const handleBack = () => {
-    navigate("/");
-  };
+  // 1. Disable the auto-login flag
+  localStorage.setItem("rememberMe", "false");
+  
+  // 2. Optional: Remove the password for security
+  localStorage.removeItem("pass");
+  sessionStorage.clear()
+  // 3. Navigate back to login
+  handleClose(); // Close the menu first
+  navigate("/");
+};
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem("appTheme");

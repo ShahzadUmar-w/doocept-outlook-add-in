@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-  Box, Typography, Button, Divider, Dialog, DialogActions,
-  DialogContent, DialogTitle, IconButton, Slide, FormControlLabel,
-  styled, Switch, Snackbar, Alert, Container
+  Box, Typography, Button, Divider, IconButton, Slide, FormControlLabel,
+  styled, Switch, Snackbar, Alert, Paper, Avatar, alpha
 } from '@mui/material';
+import { 
+  CloudUpload, FolderOpen, Description, Close, 
+  CheckCircle, Attachment, West
+} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import HeaderAppBar from '../Header/HeaderAppBar';
 import LoaderApp from '../../Loader/Loader';
@@ -11,6 +14,20 @@ import { useTheme } from '../../styles/TheemProvider';
 import { uploadToDoccept } from '../../Services/UploadFiles';
 import toast from 'react-hot-toast';
 import { getFolderProperties } from '../../Services/GetFolderProperties';
+
+// --- Modern iOS Style Switch ---
+const ModernSwitch = styled(Switch)(({ }) => ({
+  width: 42, height: 26, padding: 0,
+  '& .MuiSwitch-switchBase': {
+    padding: 0, margin: 2, transitionDuration: '300ms',
+    '&.Mui-checked': {
+      transform: 'translateX(16px)', color: '#fff',
+      '& + .MuiSwitch-track': { backgroundColor: '#4f46e5', opacity: 1, border: 0 },
+    },
+  },
+  '& .MuiSwitch-thumb': { boxSizing: 'border-box', width: 22, height: 22 },
+  '& .MuiSwitch-track': { borderRadius: 13, backgroundColor: '#39393D', opacity: 1 },
+}));
 
 interface AppProps {
   setUploadRedy: (value: boolean) => void;
@@ -21,239 +38,222 @@ interface AppProps {
 
 const UploadPage: React.FC<AppProps> = ({ setUploadRedy, files, folderUuid, folderPath }) => {
   const { theme } = useTheme();
-  const navigate = useNavigate();
-
-  // --- States ---
   const [loader, setLoader] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [fileName, setFileName] = useState("Email Item");
   const [onlyAttachments, setOnlyAttachments] = useState(false);
 
-  // Toast State
   const [snack, setSnack] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error' | 'info' | 'warning'
+    open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' | 'warning'
   });
 
-  // --- Theme Configuration ---
-  const themeStyles = useMemo(() => {
-    const isDark = theme === 'dark';
-    const isGray = theme === 'lightgray';
-    return {
-      bg: isDark ? '#303030' : isGray ? '#F0F0F0' : '#FFFFFF',
-      text: isDark ? '#FFFFFF' : '#424242',
-      cardBg: isDark ? '#424242' : '#FFFFFF',
-      shadow: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.1)',
-    };
-  }, [theme]);
+  const isDark = theme === 'dark';
+  const accentColor = '#c81355'; // Indigo
 
   useEffect(() => {
     const subject = Office.context.mailbox.item.subject;
     if (subject) setFileName(subject);
   }, []);
 
-  // --- Core Logic ---
-
   const handleShowSnack = (msg: string, sev: 'success' | 'error' | 'warning') => {
     setSnack({ open: true, message: msg, severity: sev });
   };
 
-const sanitizeFileName = (name: string) => {
-  // Replace characters: \ / : * ? " < > | with an underscore "_"
-  return name.replace(/[\\/:*?"<>|]/g, '_');
-};
-
-// const uploadAllFiles = async () => {
-//   setLoader(true);
-
-//   try {
-//     const folderpermitions = await getFolderProperties(folderUuid);
-//     console.log("folderpermitions", folderpermitions);
-//     console.log("folderpermitions.permissions", folderpermitions.permissions);
-
-//     if (folderpermitions.permissions && folderpermitions.permissions > 1) {
-
-//       // 🟢 Identify email vs attachments
-//       // Assumption: first item or matching subject is email
-//       const emailFile = files.find(f =>
-//         f.name === fileName || f.name.toLowerCase().includes("email")
-//       );
-
-//       const attachmentFiles = files.filter(f => f !== emailFile);
-
-//       // 🟢 Decide what to upload
-//       const filesToUpload = onlyAttachments
-//         ? attachmentFiles
-//         : files; // email + attachments
-
-//       for (const file of filesToUpload) {
-//          const cleanName = sanitizeFileName(file.name);
-        
-//         // 2. Naya file object banayein agar naam change hua hai
-//         const fileToUpload = new File([file], cleanName, { type: file.type });
-//         await uploadToDoccept(fileToUpload, folderPath, folderUuid, (data:any, err:any) => {
-//           if (data) {
-//             toast.success(`Uploaded: ${file.name}`);
-//           }
-
-//           if (err) {
-//             toast.error(
-//               `Upload failed: ${file.name}` +
-//               (err.message ? ` - ${err.message}` : "")
-//             );
-//           }
-//         });
-//       }
-
-//       setUploaded(true);
-//       handleShowSnack("All items uploaded successfully! 🚀", "success");
-
-//     } else {
-//       handleShowSnack(
-//         "You dont have permitions to upload these files to this folder",
-//         "error"
-//       );
-//     }
-
-//   } catch (err: any) {
-//     console.error("Upload process error:", err);
-//     handleShowSnack(err.message || "Server Error", "error");
-//   } finally {
-//     setLoader(false);
-//   }
-// };
-
-const uploadAllFiles = async () => {
+ const uploadAllFiles = async () => {
   setLoader(true);
+  let hasError = false;
+  let successCount = 0;
+
   try {
     const folderpermitions = await getFolderProperties(folderUuid);
+    
     if (folderpermitions.permissions && folderpermitions.permissions > 1) {
-
-      let filesToUpload: any[] = [];
-
-      if (onlyAttachments) {
-        // ✅ Only Attachments logic:
-        // 1. !(f as any).isMainEmail  -> Matlab .eml file nahi jayegi
-        // 2. !(f as any).isInline     -> Matlab Signature ki images nahi jayengi
-        filesToUpload = files.filter(f => !(f as any).isMainEmail && !(f as any).isInline);
-      } else {
-        // ✅ Email + Attachments logic:
-        // Sab kuch jayega (including signatures)
-        filesToUpload = files;
-      }
+      let filesToUpload = onlyAttachments
+        ? files.filter(f => !(f as any).isMainEmail && !(f as any).isInline)
+        : files;
 
       if (filesToUpload.length === 0) {
-        handleShowSnack("No attachments to upload.", "warning");
+        handleShowSnack("No attachments found.", "warning");
         setLoader(false);
         return;
       }
 
+      // Loop ke andar error track karne ke liye
       for (const file of filesToUpload) {
-        await uploadToDoccept(file, folderPath, folderUuid, (data: any, err: any) => {
-          if (data) toast.success(`Uploaded: ${file.name}`);
-          if (err) toast.error(`Failed: ${file.name} - ${err.message}`);
+        // Promise wrapper taaki hum callback ka result loop ke andar handle kar sakein
+        await new Promise((resolve) => {
+          uploadToDoccept(file, folderPath, folderUuid, (__data: any, err: any) => {
+            if (err) {
+              hasError = true;
+              toast.error(`Failed: ${file.name}`);
+              console.error(`Upload error for ${file.name}:`, err);
+            } else {
+              successCount++;
+              toast.success(`Uploaded: ${file.name}`);
+            }
+            resolve(true); // Agli file par jane ke liye
+          });
         });
       }
 
-      setUploaded(true);
-      handleShowSnack("Upload complete!", "success");
+      // Final decision based on results
+      if (!hasError && successCount > 0) {
+        // ✅ Bilkul success
+        setUploaded(true);
+        handleShowSnack("All items uploaded successfully! ", "success");
+      } else if (hasError && successCount > 0) {
+        // ⚠️ Kuch huin, kuch nahi
+        handleShowSnack(`Uploaded ${successCount} files, but some failed.`, "warning");
+      } else {
+        // ❌ Ek bhi nahi hui
+        handleShowSnack("Upload failed. Please check the errors.", "error");
+      }
+
+    } else {
+      handleShowSnack("No upload permissions for this folder.", "error");
     }
   } catch (err: any) {
-    handleShowSnack(err.message, "error");
+    handleShowSnack(err.message || "An unexpected error occurred", "error");
   } finally {
     setLoader(false);
   }
 };
 
-  const truncateFileName = (name: string, len = 30) => 
-    name.length > len ? name.substring(0, len) + "..." : name;
-
   return (
-    <Box sx={{ backgroundColor: themeStyles.bg, color: themeStyles.text, minHeight: '100vh' }}>
+    <Box sx={{ 
+      backgroundColor: isDark ? '#121212' : '#f4f6f9', 
+      minHeight: '100vh', 
+      // width: '320px', // Exact Taskpane Width
+      margin: '0 auto',
+      overflowX: 'hidden'
+    }}>
       <HeaderAppBar Is_Login_Screen={false} />
       {loader && <LoaderApp />}
 
-      <Container maxWidth="xs" sx={{ pt: 4 }}>
+      <Box sx={{ p: 2 }}>
         <Slide in direction="up">
-          <Box sx={{
-            p: 3,
-            borderRadius: 4,
-            backgroundColor: themeStyles.cardBg,
-            boxShadow: `0 8px 32px ${themeStyles.shadow}`,
-            textAlign: 'center'
-          }}>
-            <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>Upload to Doccept</Typography>
-            
-            <Typography variant="body2" sx={{ mb: 3, opacity: 0.8 }}>
-              Uploading to: <b>{folderPath}</b>
-            </Typography>
-
-            <Divider />
-
-            {/* File Preview */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', my: 3, gap: 2 }}>
-              <img src={require('../../../../../assets/Outlook.png')} alt="icon" style={{ width: 45 }} />
-              <Typography sx={{ fontWeight: 'bold' }}>
-                {truncateFileName(fileName)}
+          <Box>
+            {/* Header Info */}
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+              <IconButton size="small" onClick={() => setUploadRedy(false)} sx={{ color: isDark ? '#bbb' : '#666' }}>
+                <West fontSize="small" />
+              </IconButton>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: isDark ? '#fff' : '#1a1a1a' }}>
+                Confirm Upload
               </Typography>
             </Box>
 
-            {uploaded ? (
-              <Box sx={{ mt: 2, p: 2, bgcolor: '#f7f7f7', borderRadius: 2 }}>
-                <Button fullWidth variant="contained" sx={{ mt: 2 }} onClick={() => setUploadRedy(false)}>
-                  Back to Folders
-                </Button>
+            {/* Destination Card */}
+            <Paper elevation={0} sx={{ 
+              p: 1.5, mb: 2.5, borderRadius: 3, 
+              backgroundColor: isDark ? alpha(accentColor, 0.1) : '#fff',
+              border: `1px solid ${isDark ? alpha(accentColor, 0.2) : '#e0e0e0'}`,
+              display: 'flex', alignItems: 'center', gap: 1.5
+            }}>
+              <FolderOpen sx={{ color: accentColor }} />
+              <Box sx={{ overflow: 'hidden' }}>
+                <Typography variant="caption" sx={{ color: accentColor, fontWeight: 800, display: 'block', lineHeight: 1 }}>
+                  DESTINATION
+                </Typography>
+                <Typography variant="body2" noWrap sx={{ fontWeight: 600, color: isDark ? '#eee' : '#444' }}>
+                  {folderPath}
+                </Typography>
               </Box>
-            ) : (
-              <>
-                <FormControlLabel
-                  control={<MaterialUISwitch checked={onlyAttachments} onChange={(e) => setOnlyAttachments(e.target.checked)} />}
-                  label="Attachments Only"
-                  sx={{ my: 2 }}
-                />
+            </Paper>
 
-                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+            {!uploaded ? (
+              <>
+                {/* File Preview Card */}
+                <Paper elevation={0} sx={{ 
+                  p: 3, mb: 3, borderRadius: 4, textAlign: 'center',
+                  backgroundColor: isDark ? '#1e1e1e' : '#fff',
+                  border: `1px solid ${isDark ? '#333' : '#eee'}`,
+                }}>
+                  <Avatar sx={{ 
+                    bgcolor: alpha(accentColor, 0.1), width: 60, height: 60, mx: 'auto', mb: 2 
+                  }}>
+                    <Description sx={{ color: accentColor, fontSize: 35 }} />
+                  </Avatar>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5, color: isDark ? '#fff' : '#333' }}>
+                    {fileName.length > 25 ? fileName.substring(0, 22) + '...' : fileName}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                    {files.length} items total
+                  </Typography>
+                </Paper>
+
+                {/* Attachments Toggle */}
+                <Box sx={{ 
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                  px: 1, py: 1, mb: 3, borderRadius: 2, bgcolor: isDark ? '#1e1e1e' : alpha(accentColor, 0.02)
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Attachment sx={{ fontSize: 20, color: accentColor }} />
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: isDark ? '#ccc' : '#555' }}>
+                      Only Attachments
+                    </Typography>
+                  </Box>
+                  <ModernSwitch 
+                    checked={onlyAttachments} 
+                    onChange={(e: any) => setOnlyAttachments(e.target.checked)} 
+                  />
+                </Box>
+
+                {/* Bottom Buttons */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                   <Button 
-                    fullWidth 
-                    variant="outlined" 
-                    onClick={() => setUploadRedy(false)}
-                    sx={{ borderRadius: '12px', textTransform: 'none' }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    fullWidth 
-                    variant="contained" 
+                    fullWidth variant="contained" 
                     onClick={uploadAllFiles}
+                    startIcon={<CloudUpload />}
                     sx={{ 
-                      borderRadius: '12px', 
-                      textTransform: 'none',
-                      background: 'linear-gradient(45deg, #ff416c, #ff4b2b)',
-                      fontWeight: 'bold'
+                      borderRadius: '12px', py: 1.5, textTransform: 'none', fontWeight: 800,
+                      background: `linear-gradient(135deg, ${accentColor} 0%, #c81355 100%)`,
+                      boxShadow: `0 8px 20px ${alpha(accentColor, 0.3)}`
                     }}
                   >
                     Upload Now
                   </Button>
+                  <Button 
+                    fullWidth variant="text" 
+                    onClick={() => setUploadRedy(false)}
+                    sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600 }}
+                  >
+                    Cancel
+                  </Button>
                 </Box>
               </>
+            ) : (
+              /* Success State */
+              <Box sx={{ textAlign: 'center', py: 5 }}>
+                <CheckCircle sx={{ color: '#10b981', fontSize: 70, mb: 2 }} />
+                <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>All Set!</Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4, px: 2 }}>
+                  Successfully uploaded to Doccept.
+                </Typography>
+                <Button 
+                  fullWidth variant="outlined" 
+                  onClick={() => setUploadRedy(false)}
+                  sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700 ,color: accentColor, borderColor: accentColor}}
+                >
+                  Return to Folders
+                </Button>
+              </Box>
             )}
           </Box>
         </Slide>
-      </Container>
+      </Box>
 
-      {/* Modern MUI Toast */}
+      {/* Snackbar */}
       <Snackbar
         open={snack.open}
-        autoHideDuration={6000}
+        autoHideDuration={4000}
         onClose={() => setSnack({ ...snack, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert 
-            severity={snack.severity} 
-            variant="filled" 
-            onClose={() => setSnack({ ...snack, open: false })}
-            sx={{ width: '100%', borderRadius: '10px' }}
+          severity={snack.severity} 
+          variant="filled" 
+          sx={{ width: '100%', borderRadius: '10px', fontSize: '0.8rem' }}
         >
           {snack.message}
         </Alert>
@@ -261,22 +261,5 @@ const uploadAllFiles = async () => {
     </Box>
   );
 };
-
-// --- Custom Styled Components ---
-
-const MaterialUISwitch = styled(Switch)(({ }) => ({
-  width: 62, height: 34, padding: 7,
-  '& .MuiSwitch-switchBase': {
-    margin: 1, padding: 0, transform: 'translateX(6px)',
-    '&.Mui-checked': {
-      color: '#fff', transform: 'translateX(22px)',
-      '& + .MuiSwitch-track': { opacity: 1, backgroundColor: '#aab4be' },
-    },
-  },
-  '& .MuiSwitch-thumb': {
-    backgroundColor: '#007fff', width: 32, height: 32,
-  },
-  '& .MuiSwitch-track': { opacity: 1, backgroundColor: '#aab4be', borderRadius: 20 },
-}));
 
 export default UploadPage;
