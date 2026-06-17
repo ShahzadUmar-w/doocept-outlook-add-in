@@ -443,11 +443,6 @@ const handleGetEmail_and_Attachemnts = async () => {
     setSelectedfiles(allFiles);
 
     setToast({ open: true, message: "Email & Attachments ready!", severity: "success" });
- setToast({
-        open: true,
-        message: "Email and attachments ready for upload!",
-        severity: "success",
-      });
   } catch (err: any) {
     console.error(err);
     setToast({ open: true, message: `Error: ${err.message}`, severity: "error" });
