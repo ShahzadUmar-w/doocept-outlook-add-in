@@ -253,7 +253,7 @@ const Home = () => {
                 variant="body2" 
                 sx={{ 
                   fontWeight: selectedFolderId === node.uuid ? "bold" : "500", 
-                  color: selectedFolderId === node.uuid ? "white" : (isDark ? "#f0f0f0" : "#333"), // Fixed visibility
+                  color: selectedFolderId === node.uuid ? "#989393" : (isDark ? "#f0f0f0" : "#333"), // Fixed visibility
                   fontSize: "13px"
                 }}
               >
