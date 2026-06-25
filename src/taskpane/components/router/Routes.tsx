@@ -40,7 +40,7 @@ const RouterApp: React.FC = () => {
       borderRadius: "10px",
       background: "#333",
       color: "#fff",
-      fontSize: "14px",
+      fontSize: "9px",
     },
   }}/>
             <Router>

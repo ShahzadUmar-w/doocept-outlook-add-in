@@ -59,61 +59,104 @@ const UploadPage: React.FC<AppProps> = ({ setUploadRedy, files, folderUuid, fold
     setSnack({ open: true, message: msg, severity: sev });
   };
 
- const uploadAllFiles = async () => {
+const uploadAllFiles = async () => {
   setLoader(true);
+
   let hasError = false;
   let successCount = 0;
 
   try {
     const folderpermitions = await getFolderProperties(folderUuid);
-    
-    if (folderpermitions.permissions && folderpermitions.permissions > 1) {
-      let filesToUpload = onlyAttachments
-        ? files.filter(f => !(f as any).isMainEmail && !(f as any).isInline)
-        : files;
 
-      if (filesToUpload.length === 0) {
-        handleShowSnack("No attachments found.", "warning");
-        setLoader(false);
-        return;
-      }
+    if (!folderpermitions.permissions || folderpermitions.permissions <= 1) {
+      handleShowSnack("No upload permissions for this folder.", "error");
+      return;
+    }
 
-      // Loop ke andar error track karne ke liye
-      for (const file of filesToUpload) {
-        // Promise wrapper taaki hum callback ka result loop ke andar handle kar sakein
-        await new Promise((resolve) => {
-          uploadToDoccept(file, folderPath, folderUuid, (__data: any, err: any) => {
+    const filesToUpload = onlyAttachments
+      ? files.filter(
+          (f) => !(f as any).isMainEmail && !(f as any).isInline
+        )
+      : files;
+
+    if (filesToUpload.length === 0) {
+      handleShowSnack("No attachments found.", "warning");
+      return;
+    }
+
+    for (const file of filesToUpload) {
+      await new Promise<void>((resolve) => {
+        let handled = false;
+
+        uploadToDoccept(
+          file,
+          folderPath,
+          folderUuid,
+          (__data: any, err: any) => {
+            console.log("Upload Callback:", {
+              file: file.name,
+              data: __data,
+              error: err,
+            });
+
+            // Callback agar dobara fire ho to ignore
+            if (handled) return;
+
+            // Empty/intermediate callback ignore karo
+            if (!err && !__data) return;
+
+            handled = true;
+
             if (err) {
               hasError = true;
-              toast.error(`Failed: ${file.name}`);
-              console.error(`Upload error for ${file.name}:`, err);
+
+              const message =
+                err?.message?.trim() || `Failed: ${file.name}`;
+
+              toast.error(message);
+
+              console.error(
+                `Upload error for ${file.name}:`,
+                err
+              );
             } else {
               successCount++;
-              toast.success(`Uploaded: ${file.name}`);
+
+              toast.success(
+                `Uploaded: ${file.name}`
+              );
             }
-            resolve(true); // Agli file par jane ke liye
-          });
-        });
-      }
 
-      // Final decision based on results
-      if (!hasError && successCount > 0) {
-        // ✅ Bilkul success
-        setUploaded(true);
-        handleShowSnack("All items uploaded successfully! ", "success");
-      } else if (hasError && successCount > 0) {
-        // ⚠️ Kuch huin, kuch nahi
-        handleShowSnack(`Uploaded ${successCount} files, but some failed.`, "warning");
-      } else {
-        // ❌ Ek bhi nahi hui
-        handleShowSnack("Upload failed. Please check the errors.", "error");
-      }
+            resolve();
+          }
+        );
+      });
+    }
 
+    if (!hasError && successCount > 0) {
+      setUploaded(true);
+      handleShowSnack(
+        "All items uploaded successfully!",
+        "success"
+      );
+    } else if (hasError && successCount > 0) {
+      handleShowSnack(
+        `Uploaded ${successCount} files, but some failed.`,
+        "warning"
+      );
     } else {
-      handleShowSnack("No upload permissions for this folder.", "error");
+      handleShowSnack(
+        "Upload failed. Please check the errors.",
+        "error"
+      );
     }
   } catch (err: any) {
-    handleShowSnack(err.message || "An unexpected error occurred", "error");
+    console.error(err);
+
+    handleShowSnack(
+      err?.message || "An unexpected error occurred",
+      "error"
+    );
   } finally {
     setLoader(false);
   }
