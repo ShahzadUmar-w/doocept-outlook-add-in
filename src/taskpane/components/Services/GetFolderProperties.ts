@@ -1,34 +1,33 @@
 export async function getFolderProperties(fldId: string) {
-    const AccessLinkStored = localStorage.getItem('AccessLink');
-  
+  const AccessLinkStored =
+    sessionStorage.getItem("AccessLink") || localStorage.getItem("AccessLink");
+
+  const username =
+    sessionStorage.getItem("userId") || localStorage.getItem("userId") || "";
+
+  const password =
+    sessionStorage.getItem("pass") || localStorage.getItem("pass") || "";
+
+  if (!AccessLinkStored || !username || !password) {
+    throw new Error("Missing login credentials");
+  }
+
   const url = `${AccessLinkStored}/doccept/services/rest/folder/getProperties?fldId=${fldId}`;
-
-   const username =localStorage.getItem("userId")||"";
-  const password =localStorage.getItem("pass")||"";
-
-  // Basic Auth header
   const authHeader = "Basic " + btoa(`${username}:${password}`);
 
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": authHeader,
-      },
-      credentials: "include", // include cookies like JSESSIONID if needed
-    });
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: authHeader,
+    },
+    credentials: "include",
+  });
 
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-
-  } catch (error) {
-    console.error("Doccept Get Properties Error:", error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(`HTTP Error: ${response.status}`);
   }
+
+  return await response.json();
 }

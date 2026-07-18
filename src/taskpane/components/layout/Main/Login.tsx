@@ -105,18 +105,20 @@ const Login = () => {
         return;
     }
  sessionStorage.setItem("userId", userId);
-  sessionStorage.setItem("pass", password);
-  sessionStorage.setItem("AccessLink", AccessLink);
-    // Save/Clear credentials logic
-    if (savePassword) {
-      localStorage.setItem("userId", userId);
-      localStorage.setItem("pass", password);
-      localStorage.setItem("AccessLink", AccessLink);
-      localStorage.setItem("rememberMe", "true");
-    } else {
-      localStorage.setItem("rememberMe", "false");
-      localStorage.removeItem("pass"); // Security: don't keep pass if not requested
-    }
+sessionStorage.setItem("pass", password);
+sessionStorage.setItem("AccessLink", AccessLink);
+
+if (savePassword) {
+  localStorage.setItem("userId", userId);
+  localStorage.setItem("pass", password);
+  localStorage.setItem("AccessLink", AccessLink);
+  localStorage.setItem("rememberMe", "true");
+} else {
+  localStorage.removeItem("userId");
+  localStorage.removeItem("pass");
+  localStorage.removeItem("AccessLink");
+  localStorage.setItem("rememberMe", "false");
+}
 
     performLogin(userId, password, AccessLink, false);
   };

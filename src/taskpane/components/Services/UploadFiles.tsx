@@ -29,10 +29,10 @@ export async function uploadToDoccept(file:any, folderPath:any, docUuid:any, cal
   formData.append("roles", "ROLE_*");
   formData.append("message", "");
 
-  const username = localStorage.getItem("userId") || "";
-  const password = localStorage.getItem("pass") || "";
+  const username = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+  const password = localStorage.getItem("pass") || sessionStorage.getItem("pass");
   const base64 = btoa(`${username}:${password}`);
-    const AccessLinkStored = localStorage.getItem('AccessLink');
+    const AccessLinkStored = localStorage.getItem('AccessLink')|| sessionStorage.getItem('AccessLink')  ;
 
   try {
     const resp = await fetch(
